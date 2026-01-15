@@ -23,9 +23,6 @@ def subspace_residual_loss(Y_pred, U_gt):
     R    = Y_pred - (P_gt @ Y_pred)           # (I - P_gt)Y
     return (R ** 2).mean()
 
-import torch
-import torch.nn.functional as F
-
 def projection_align_loss(Y_pred, U_gt, eps=1e-6):
     """
     Y_pred: [B, 64, 6]  (network output)
@@ -51,3 +48,14 @@ def grassmann_loss(Y_pred, U_gt):
     # Want M close to orthogonal => large Fro norm
     r = M.shape[-1]
     return (r - (M ** 2).sum(dim=(-1, -2))).mean()
+
+def gram_match_loss(Y_pred, Y_gt, eps=1e-6):
+    Gp = Y_pred @ Y_pred.transpose(-1, -2)     # [B,64,64]
+    Gt = Y_gt   @ Y_gt.transpose(-1, -2)
+
+    # scale-invariant normalization
+    Gp = Gp / (Gp.diagonal(dim1=-2, dim2=-1).sum(-1).view(-1,1,1) + eps)
+    Gt = Gt / (Gt.diagonal(dim1=-2, dim2=-1).sum(-1).view(-1,1,1) + eps)
+
+    return ((Gp - Gt) ** 2).mean()
+
